@@ -4,7 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 const LandingPage = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to our app</Text>
+      <Text style={styles.title}>Sign In or Sign Up!</Text>
       <TouchableOpacity
         onPress={() => router.push("/SignIn")}
         style={styles.button}
@@ -42,6 +42,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 40,
     marginVertical: 10,
+    width: 200,
+    alignItems: "center",
   },
   buttonText: {
     color: "#fff",
