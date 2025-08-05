@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import { useState } from "react";
 import {
-  ScrollView,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import * as Yup from "yup";
+import { addEmployee, signOutUser } from "../services/firebase";
 
 // form values
 interface EmployeeFormValues {
@@ -58,17 +59,53 @@ const EmployeeSchema = Yup.object().shape({
 
 const Employee = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (values: EmployeeFormValues, { resetForm }: any) => {
-    console.log("Employee values:", values);
-    // would be saved to the database here if it was implemented
-    alert("Employee information saved successfully!");
-    resetForm();
+  const handleSubmit = async (
+    values: EmployeeFormValues,
+    { resetForm }: any
+  ) => {
+    setIsLoading(true);
+
+    try {
+      const result = await addEmployee(values);
+
+      if (result.success) {
+        Alert.alert("Success", "Employee information saved successfully!", [
+          { text: "OK", onPress: () => resetForm() },
+        ]);
+      } else {
+        Alert.alert("Error", result.error || "Failed to save employee");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const result = await signOutUser();
+      if (result.success) {
+        router.replace("/");
+      } else {
+        Alert.alert("Error", "Failed to sign out");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred");
+    }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Add Employee Information</Text>
+    <View style={styles.container}>
+      {/* Add header with sign out button */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Add Employee</Text>
+        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
       <Formik<EmployeeFormValues>
         initialValues={{
           employeeId: "",
@@ -211,10 +248,7 @@ const Employee = () => {
           </View>
         )}
       </Formik>
-      <TouchableOpacity onPress={() => router.replace("/")}>
-        <Text style={styles.linkText}>Back To Landing Page</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 };
 
@@ -282,5 +316,29 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#2563eb",
     marginTop: 20,
+  },
+  signOutButton: {
+    backgroundColor: "#dc2626",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignSelf: "flex-end",
+    marginBottom: 20,
+  },
+  signOutButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 10,
+  },
+  buttonContainer: {
+    marginTop: 20,
+    gap: 12,
   },
 });

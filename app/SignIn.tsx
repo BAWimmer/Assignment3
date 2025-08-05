@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import { useState } from "react";
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -9,23 +10,38 @@ import {
   View,
 } from "react-native";
 import * as Yup from "yup";
+import { signInUser } from "../services/firebase";
 
 interface SignInFormValues {
-  username: string;
+  email: string;
   password: string;
 }
 
 const SignInSchema = Yup.object().shape({
-  username: Yup.string().required("Username is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
   password: Yup.string().required("Password is required"),
 });
 
 const SignIn = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (values: SignInFormValues) => {
-    console.log("Login values:", values);
-    router.push("/employee");
+  const handleSignIn = async (values: SignInFormValues) => {
+    setIsLoading(true);
+
+    try {
+      const result = await signInUser(values.email, values.password);
+
+      if (result.success) {
+        router.push("/employee");
+      } else {
+        Alert.alert("Error", result.error || "Failed to sign in");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,11 +49,11 @@ const SignIn = () => {
       <Text style={styles.title}>Sign In</Text>
       <Formik<SignInFormValues>
         initialValues={{
-          username: "",
+          email: "",
           password: "",
         }}
         validationSchema={SignInSchema}
-        onSubmit={handleLogin}
+        onSubmit={handleSignIn}
       >
         {({
           handleChange,
@@ -50,13 +66,14 @@ const SignIn = () => {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Username"
-              onChangeText={handleChange("username")}
-              onBlur={handleBlur("username")}
-              value={values.username}
+              placeholder="Email"
+              keyboardType="email-address"
+              onChangeText={handleChange("email")}
+              onBlur={handleBlur("email")}
+              value={values.email}
             />
-            {touched.username && errors.username && (
-              <Text style={styles.error}>{errors.username}</Text>
+            {touched.email && errors.email && (
+              <Text style={styles.error}>{errors.email}</Text>
             )}
             <TextInput
               style={styles.input}
@@ -71,9 +88,12 @@ const SignIn = () => {
             )}
             <TouchableOpacity
               onPress={() => handleSubmit()}
-              style={styles.submitButton}
+              style={[styles.submitButton, isLoading && styles.disabledButton]}
+              disabled={isLoading}
             >
-              <Text style={styles.submitButtonText}>Sign In</Text>
+              <Text style={styles.submitButtonText}>
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Text>
             </TouchableOpacity>
           </>
         )}
@@ -129,5 +149,8 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#2563eb",
     marginTop: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

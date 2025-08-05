@@ -1,72 +1,67 @@
 import { useRouter } from "expo-router";
-import React from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
-// unnecessary page, but created for practice
-
-interface Employee {
-  id: string;
-  employeeId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  department: string;
-  position: string;
-  startDate: string;
-  salary: string;
-  phoneNumber: string;
-}
-
-// sample employee data
-const sampleEmployees: Employee[] = [
-  {
-    id: "1",
-    employeeId: "EMP001",
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@company.com",
-    department: "Engineering",
-    position: "Software Developer",
-    startDate: "2023-01-15",
-    salary: "75000",
-    phoneNumber: "5551234567",
-  },
-  {
-    id: "2",
-    employeeId: "EMP002",
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "jane.smith@company.com",
-    department: "Marketing",
-    position: "Marketing Manager",
-    startDate: "2022-06-20",
-    salary: "68000",
-    phoneNumber: "5559876543",
-  },
-  {
-    id: "3",
-    employeeId: "EMP003",
-    firstName: "Mike",
-    lastName: "Johnson",
-    email: "mike.johnson@company.com",
-    department: "Sales",
-    position: "Sales Representative",
-    startDate: "2023-03-10",
-    salary: "55000",
-    phoneNumber: "5555551234",
-  },
-];
+import { EmployeeData, getEmployees, signOutUser } from "../services/firebase";
 
 const ViewEmployees = () => {
   const router = useRouter();
+  const [employees, setEmployees] = useState<(EmployeeData & { id: string })[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
 
-  const renderEmployeeCard = ({ item }: { item: Employee }) => (
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  const loadEmployees = async () => {
+    try {
+      const result = await getEmployees();
+      if (result.success) {
+        setEmployees(result.employees ?? []);
+      }
+    } catch (error) {
+      console.error("Error loading employees:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>Loading employees...</Text>
+      </View>
+    );
+  }
+
+  const handleSignOut = async () => {
+    try {
+      const result = await signOutUser();
+      if (result.success) {
+        router.replace("/");
+      } else {
+        Alert.alert("Error", "Failed to sign out");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An unexpected error occurred");
+    }
+  };
+
+  const renderEmployeeCard = ({
+    item,
+  }: {
+    item: EmployeeData & { id: string };
+  }) => (
     <View style={styles.employeeCard}>
       <View style={styles.cardHeader}>
         <Text style={styles.employeeName}>
@@ -115,14 +110,17 @@ const ViewEmployees = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Employee Directory</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Employee Directory</Text>
+        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.subtitle}>
-        Total Employees: {sampleEmployees.length}
-      </Text>
+      <Text style={styles.subtitle}>Total Employees: {employees.length}</Text>
 
       <FlatList
-        data={sampleEmployees}
+        data={employees}
         renderItem={renderEmployeeCard}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
@@ -135,13 +133,6 @@ const ViewEmployees = () => {
           style={styles.addButton}
         >
           <Text style={styles.addButtonText}>Add New Employee</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => router.replace("/")}
-          style={styles.homeButton}
-        >
-          <Text style={styles.homeButtonText}>Back to Home</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -249,6 +240,33 @@ const styles = StyleSheet.create({
   homeButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 10,
+  },
+  signOutButton: {
+    backgroundColor: "#dc2626",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  signOutButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "600",
   },
 });

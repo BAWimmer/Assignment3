@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import { useState } from "react";
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -9,6 +10,7 @@ import {
   View,
 } from "react-native";
 import * as Yup from "yup";
+import { signUpUser } from "../services/firebase";
 
 // form values
 interface SignInFormValues {
@@ -45,10 +47,31 @@ const SignInSchema = Yup.object().shape({
 
 const SignUp = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (values: SignInFormValues) => {
-    console.log("Login values:", values);
-    router.push("/");
+  const handleSignUp = async (values: SignInFormValues) => {
+    setIsLoading(true);
+
+    try {
+      const result = await signUpUser(values.email, values.password, {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        username: values.username,
+      });
+
+      if (result.success) {
+        Alert.alert("Success", "Account created successfully!", [
+          { text: "OK", onPress: () => router.push("/SignIn") },
+        ]);
+      } else {
+        Alert.alert("Error", result.error || "Failed to create account");
+      }
+    } catch (error) {
+      console.error("SignUp error:", error);
+      Alert.alert("Error", "An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -64,7 +87,7 @@ const SignUp = () => {
           confirmPassword: "",
         }}
         validationSchema={SignInSchema}
-        onSubmit={handleLogin}
+        onSubmit={handleSignUp}
       >
         {({
           handleChange,
@@ -140,9 +163,12 @@ const SignUp = () => {
             )}
             <TouchableOpacity
               onPress={() => handleSubmit()}
-              style={styles.submitButton}
+              style={[styles.submitButton, isLoading && styles.disabledButton]}
+              disabled={isLoading}
             >
-              <Text style={styles.submitButtonText}>Sign Up</Text>
+              <Text style={styles.submitButtonText}>
+                {isLoading ? "Creating Account..." : "Sign Up"}
+              </Text>
             </TouchableOpacity>
           </>
         )}
@@ -198,5 +224,8 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#2563eb",
     marginTop: 20,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
